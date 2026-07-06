@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>六边形弹性碰撞模拟器</title>
+<style>
+  :root{
+    --bg-0:#0a0e14;
+    --bg-1:#111826;
+    --panel:#141c2b;
+    --line:#223049;
+    --text-hi:#dfe8f3;
+    --text-lo:#7d8ba3;
+    --accent-a:#ffb454;   /* 琥珀 - 能量/重力 */
+    --accent-b:#5ee6d0;   /* 磷光青 - 弹性/速度 */
+    --accent-r:#ff6b6b;   /* 警示红 - 重置 */
+    --mono: 'JetBrains Mono','SFMono-Regular',Consolas,'Courier New',monospace;
+    --sans: 'Inter','Segoe UI',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:
+      radial-gradient(1200px 800px at 15% 8%, rgba(94,230,208,0.05), transparent 60%),
+      radial-gradient(1000px 700px at 85% 92%, rgba(255,180,84,0.05), transparent 60%),
+      var(--bg-0);
+    color:var(--text-hi);
+    font-family:var(--sans);
+    overflow:hidden;
+  }
+  .stage{
+    display:flex;
+    width:100vw; height:100vh;
+    align-items:stretch;
+  }
+  .viewport{
+    flex:1 1 auto;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px;
+  }
+  .viewport::before{
+    content:"";
+    position:absolute; inset:24px;
+    border:1px solid var(--line);
+    pointer-events:none;
+    opacity:.5;
+  }
+  canvas{
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%),
+      var(--bg-1);
+    border-radius:4px;
+    box-shadow: 0 0 0 1px var(--line), 0 30px 80px -30px rgba(0,0,0,0.7);
+    max-width:100%;
+    max-height:100%;
+    touch-action:none;
+  }
+  .hud{
+    position:absolute;
+    top:38px; left:38px;
+    font-family:var(--mono);
+    letter-spacing:.06em;
+    pointer-events:none;
+    user-select:none;
+  }
+  .hud .tag{
+    font-size:11px;
+    color:var(--text-lo);
+    text-transform:uppercase;
+  }
+  .hud .val{
+    font-size:22px;
+    color:var(--accent-b);
+    font-weight:600;
+    margin-top:2px;
+  }
+
+  /* ---- Control rail ---- */
+  .rail{
+    flex:0 0 300px;
+    background:var(--panel);
+    border-left:1px solid var(--line);
+    padding:28px 26px 24px;
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+    overflow-y:auto;
+  }
+  .rail-title{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--text-lo);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:2px;
+  }
+  .rail-title .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--accent-b);
+    box-shadow:0 0 8px var(--accent-b);
+  }
+  .rail h1{
+    font-size:17px;
+    margin:0 0 4px;
+    font-weight:600;
+    color:var(--text-hi);
+  }
+  .rail .sub{
+    font-size:12px;
+    color:var(--text-lo);
+    line-height:1.5;
+    margin-bottom:6px;
+  }
+
+  .field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .field-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    font-family:var(--mono);
+  }
+  .field-head .name{
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--text-lo);
+  }
+  .field-head .readout{
+    font-size:14px;
+    color:var(--accent-a);
+    font-weight:600;
+    min-width:52px;
+    text-align:right;
+  }
+  input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:3px;
+    border-radius:2px;
+    background:var(--line);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:14px; height:14px;
+    border-radius:50%;
+    background:var(--accent-b);
+    box-shadow:0 0 0 3px rgba(94,230,208,0.15);
+    cursor:pointer;
+    margin-top:-5.5px;
+    transition:box-shadow .15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover{
+    box-shadow:0 0 0 5px rgba(94,230,208,0.22);
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:3px; border-radius:2px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px; height:14px; border:none; border-radius:50%;
+    background:var(--accent-b); cursor:pointer;
+  }
+
+  .divider{ height:1px; background:var(--line); margin:2px 0; }
+
+  .actions{
+    display:flex;
+    gap:10px;
+    margin-top:4px;
+  }
+  button{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    padding:11px 14px;
+    border-radius:3px;
+    border:1px solid var(--line);
+    background:#0e1520;
+    color:var(--text-hi);
+    cursor:pointer;
+    flex:1;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  button:hover{ border-color:var(--accent-b); color:var(--accent-b); }
+  button:active{ transform:translateY(1px); }
+  button.danger:hover{ border-color:var(--accent-r); color:var(--accent-r); }
+  button.primary{
+    border-color:var(--accent-b);
+    color:var(--accent-b);
+  }
+
+  .stats{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--text-lo);
+    line-height:1.9;
+    padding-top:6px;
+    border-top:1px solid var(--line);
+  }
+  .stats b{ color:var(--text-hi); font-weight:600; }
+
+  .legend{
+    font-family:var(--mono);
+    font-size:10.5px;
+    color:var(--text-lo);
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    margin-top:auto;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+  }
+  .legend span.k{ color:var(--accent-a); }
+
+  @media (max-width:820px){
+    .stage{ flex-direction:column; }
+    .rail{ flex:0 0 auto; border-left:none; border-top:1px solid var(--line); }
+    .viewport{ padding:12px; }
+    .hud{ top:20px; left:20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="viewport">
+    <div class="hud">
+      <div class="tag">质点数量</div>
+      <div class="val" id="hudCount">--</div>
+    </div>
+    <canvas id="scene" width="900" height="820"></canvas>
+  </div>
+
+  <div class="rail">
+    <div>
+      <div class="rail-title"><span class="dot"></span>HEX-CONTAINER</div>
+      <h1>刚体碰撞模拟台</h1>
+      <div class="sub">六边形边界内的多体自由落体与弹性碰撞。所有物理量按 delta-time 积分，帧率无关。</div>
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="name">重力加速度</span><span class="readout" id="gravityRead">900</span></div>
+      <input type="range" id="gravitySlider" min="0" max="2200" step="10" value="900">
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="name">弹性系数</span><span class="readout" id="restitutionRead">0.80</span></div>
+      <input type="range" id="restitutionSlider" min="0" max="100" step="1" value="80">
+    </div>
+
+    <div class="field">
+      <div class="field-head"><span class="name">小球数量</span><span class="readout" id="countRead">18</span></div>
+      <input type="range" id="countSlider" min="1" max="80" step="1" value="18">
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="actions">
+      <button id="pauseBtn" class="primary">⏸ 暂停</button>
+      <button id="resetBtn" class="danger">⟲ 重置</button>
+    </div>
+
+    <div class="stats">
+      运行时间 <b id="statTime">0.0s</b><br>
+      当前帧率 <b id="statFps">--</b><br>
+      物理子步 <b id="statSub">--</b>
+    </div>
+
+    <div class="legend">
+      <div><span class="k">GRAVITY</span> — 每秒像素平方加速度</div>
+      <div><span class="k">RESTITUTION</span> — 碰撞后速度保留比例</div>
+      <div><span class="k">BALLS</span> — 场景内圆形刚体总数</div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+ * Ball 类：描述单个圆形刚体的状态与自身行为
+ * ============================================================ */
+class Ball {
+  constructor(x, y, radius, color) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 220;   // 初始随机速度，制造观感差异
+    this.vy = (Math.random() - 0.5) * 120;
+    this.radius = radius;
+    // 质量与面积（半径平方）成正比，符合"越大越重"的直觉物理
+    this.mass = radius * radius;
+    this.color = color;
+  }
+
+  // 根据当前速度与重力，在 dt 秒内推进位置（半隐式欧拉积分，稳定性优于显式欧拉）
+  integrate(dt, gravity) {
+    this.vy += gravity * dt;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+  }
+
+  draw(ctx) {
+    const g = ctx.createRadialGradient(
+      this.x - this.radius * 0.35, this.y - this.radius * 0.35, this.radius * 0.1,
+      this.x, this.y, this.radius
+    );
+    g.addColorStop(0, this.color.hi);
+    g.addColorStop(1, this.color.lo);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.stroke();
+  }
+}
+
+/* ============================================================
+ * Hexagon 类：正六边形边界，负责顶点/边生成与和小球的碰撞响应
+ * ============================================================ */
+class Hexagon {
+  constructor(cx, cy, radius) {
+    this.cx = cx;
+    this.cy = cy;
+    this.radius = radius;
+    this.rebuild();
+  }
+
+  // 生成 6 个顶点（尖顶朝上）与对应的 6 条边（含边的外法线方向）
+  rebuild() {
+    this.vertices = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = -Math.PI / 2 + i * (Math.PI / 3); // 从正上方开始，每 60° 一个顶点
+      this.vertices.push({
+        x: this.cx + this.radius * Math.cos(angle),
+        y: this.cy + this.radius * Math.sin(angle)
+      });
+    }
+    this.edges = [];
+    for (let i = 0; i < 6; i++) {
+      const p1 = this.vertices[i];
+      const p2 = this.vertices[(i + 1) % 6];
+      // 边方向向量
+      const ex = p2.x - p1.x, ey = p2.y - p1.y;
+      const len = Math.hypot(ex, ey);
+      // 外法线：对边方向 (ex,ey) 顺时针旋转90° => (ey,-ex)，
+      // 由于顶点按顺时针（屏幕坐标 y 向下）排列，该旋转指向六边形外侧
+      const nx = ey / len, ny = -ex / len;
+      this.edges.push({ p1, p2, nx, ny });
+    }
+  }
+
+  // 处理单个小球与六边形所有边的碰撞：越界则沿法线推回并反射速度
+  resolveBallCollision(ball, restitution) {
+    for (const edge of this.edges) {
+      // 球心相对于边上一点 p1 的向量，在外法线方向上的投影
+      // d 表示球心到边所在直线的"外侧"有符号距离：
+      //   d <= -radius  => 完全在边界内安全区
+      //   d >  -radius  => 球体已经越过边界（穿透）
+      const dx = ball.x - edge.p1.x;
+      const dy = ball.y - edge.p1.y;
+      const d = dx * edge.nx + dy * edge.ny;
+
+      if (d > -ball.radius) {
+        // 仅当球确实落在该边对应的线段范围附近时才处理（避免顶点外误判过度修正，
+        // 对正凸多边形而言，用无限长直线判断已足够稳健，故此处直接处理）
+        const penetration = d + ball.radius;
+
+        // 1) 位置修正：把球沿内法线方向推回，消除穿透，避免"卡边"抖动
+        ball.x -= edge.nx * penetration;
+        ball.y -= edge.ny * penetration;
+
+        // 2) 速度反射：仅对指向墙外的速度分量取反并乘以弹性系数
+        const vn = ball.vx * edge.nx + ball.vy * edge.ny;
+        if (vn > 0) {
+          ball.vx -= (1 + restitution) * vn * edge.nx;
+          ball.vy -= (1 + restitution) * vn * edge.ny;
+          // 切向速度施加轻微摩擦衰减，防止球体沿墙无限打滑积累能量
+          const tx = -edge.ny, ty = edge.nx;
+          const vt = ball.vx * tx + ball.vy * ty;
+          const friction = 0.995;
+          ball.vx += tx * vt * (friction - 1);
+          ball.vy += ty * vt * (friction - 1);
+        }
+      }
+    }
+  }
+
+  draw(ctx) {
+    ctx.beginPath();
+    this.vertices.forEach((v, i) => {
+      if (i === 0) ctx.moveTo(v.x, v.y); else ctx.lineTo(v.x, v.y);
+    });
+    ctx.closePath();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(94,230,208,0.55)";
+    ctx.shadowColor = "rgba(94,230,208,0.35)";
+    ctx.shadowBlur = 16;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+}
+
+/* ============================================================
+ * Game 类：整体调度 —— 时间步进、碰撞求解、渲染与 UI 绑定
+ * ============================================================ */
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext("2d");
+
+    this.gravity = 900;
+    this.restitution = 0.8;
+    this.ballCount = 18;
+    this.running = true;
+    this.elapsed = 0;
+
+    // 固定物理步长，避免大 dt（掉帧、切标签页）导致穿模或数值爆炸
+    this.fixedDt = 1 / 120;
+    this.accumulator = 0;
+    this.maxSubSteps = 8;
+
+    const size = Math.min(canvas.width, canvas.height);
+    this.hexagon = new Hexagon(canvas.width / 2, canvas.height / 2, size * 0.46);
+
+    this.balls = [];
+    this.spawnBalls();
+
+    this._lastTime = null;
+    this._fpsSmoothed = 60;
+
+    this.bindUI();
+    requestAnimationFrame((t) => this.loop(t));
+  }
+
+  // 生成指定数量的小球，随机大小/颜色/位置（保证初始不重叠、不越界）
+  spawnBalls() {
+    this.balls = [];
+    const hueStep = 360 / Math.max(this.ballCount, 1);
+    const maxTries = 200;
+
+    for (let i = 0; i < this.ballCount; i++) {
+      const radius = 10 + Math.random() * 14;
+      let placed = false;
+
+      for (let t = 0; t < maxTries && !placed; t++) {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = Math.random() * (this.hexagon.radius * 0.6);
+        const x = this.hexagon.cx + Math.cos(angle) * dist;
+        const y = this.hexagon.cy + Math.sin(angle) * dist * 0.6 - this.hexagon.radius * 0.15;
+
+        let overlaps = false;
+        for (const other of this.balls) {
+          const dd = Math.hypot(x - other.x, y - other.y);
+          if (dd < radius + other.radius + 4) { overlaps = true; break; }
+        }
+        if (!overlaps) {
+          const hue = (i * hueStep + Math.random() * 12) % 360;
+          const color = {
+            hi: `hsl(${hue}, 85%, 68%)`,
+            lo: `hsl(${hue}, 70%, 42%)`
+          };
+          this.balls.push(new Ball(x, y, radius, color));
+          placed = true;
+        }
+      }
+      if (!placed) {
+        // 极端拥挤时退化为中心附近直接放置，保证数量达标
+        const hue = (i * hueStep) % 360;
+        this.balls.push(new Ball(
+          this.hexagon.cx + (Math.random() - 0.5) * 20,
+          this.hexagon.cy + (Math.random() - 0.5) * 20,
+          radius,
+          { hi: `hsl(${hue},85%,68%)`, lo: `hsl(${hue},70%,42%)` }
+        ));
+      }
+    }
+  }
+
+  // 精确的两球弹性碰撞：基于冲量（impulse-based）沿法线方向交换动量
+  resolveBallPair(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = a.radius + b.radius;
+    if (dist === 0 || dist >= minDist) return;
+
+    // 碰撞法线（由 a 指向 b）
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    // 1) 位置修正：按各自"越陷越深"的比例分摊分离量，避免相互挤压卡顿
+    const overlap = minDist - dist;
+    const totalMass = a.mass + b.mass;
+    const pushA = overlap * (b.mass / totalMass);
+    const pushB = overlap * (a.mass / totalMass);
+    a.x -= nx * pushA; a.y -= ny * pushA;
+    b.x += nx * pushB; b.y += ny * pushB;
+
+    // 2) 沿法线方向的相对速度
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const velAlongNormal = rvx * nx + rvy * ny;
+
+    // 若两球正在分离（法线方向相对速度为正），无需施加冲量
+    if (velAlongNormal > 0) return;
+
+    // 3) 冲量标量 j，来自一维弹性碰撞动量与能量守恒方程组的解
+    const e = this.restitution;
+    const j = -(1 + e) * velAlongNormal / (1 / a.mass + 1 / b.mass);
+
+    const jx = j * nx, jy = j * ny;
+    a.vx -= jx / a.mass; a.vy -= jy / a.mass;
+    b.vx += jx / b.mass; b.vy += jy / b.mass;
+  }
+
+  // 单个固定步长的物理推进：重力积分 -> 球-球碰撞 -> 球-墙碰撞
+  physicsStep(dt) {
+    for (const ball of this.balls) {
+      ball.integrate(dt, this.gravity);
+    }
+
+    // 球-球碰撞：O(n^2) 两两检测，对当前规模（数十个球）足够高效，
+    // 多次迭代（此处每子步一次）配合位置修正可有效防止穿模与挤压抖动
+    for (let i = 0; i < this.balls.length; i++) {
+      for (let j = i + 1; j < this.balls.length; j++) {
+        this.resolveBallPair(this.balls[i], this.balls[j]);
+      }
+    }
+
+    // 球-墙碰撞
+    for (const ball of this.balls) {
+      this.hexagon.resolveBallCollision(ball, this.restitution);
+    }
+  }
+
+  loop(timestamp) {
+    if (this._lastTime === null) this._lastTime = timestamp;
+    let frameDt = (timestamp - this._lastTime) / 1000;
+    this._lastTime = timestamp;
+    // 防止切换标签页恢复后出现巨大 dt 造成的"时间跳跃穿模"
+    frameDt = Math.min(frameDt, 0.25);
+
+    const instFps = frameDt > 0 ? 1 / frameDt : 60;
+    this._fpsSmoothed += (instFps - this._fpsSmoothed) * 0.1;
+
+    let subSteps = 0;
+    if (this.running) {
+      this.elapsed += frameDt;
+      this.accumulator += frameDt;
+      // 以固定步长消化累积时间，保证物理表现与帧率解耦
+      while (this.accumulator >= this.fixedDt && subSteps < this.maxSubSteps) {
+        this.physicsStep(this.fixedDt);
+        this.accumulator -= this.fixedDt;
+        subSteps++;
+      }
+    }
+
+    this.render();
+    this.updateStats(subSteps);
+
+    requestAnimationFrame((t) => this.loop(t));
+  }
+
+  render() {
+    const ctx = this.ctx;
+    const w = this.canvas.width, h = this.canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    this.hexagon.draw(ctx);
+    for (const ball of this.balls) ball.draw(ctx);
+  }
+
+  updateStats(subSteps) {
+    document.getElementById("hudCount").textContent = this.balls.length;
+    document.getElementById("statTime").textContent = this.elapsed.toFixed(1) + "s";
+    document.getElementById("statFps").textContent = Math.round(this._fpsSmoothed);
+    document.getElementById("statSub").textContent = subSteps;
+  }
+
+  bindUI() {
+    const gravitySlider = document.getElementById("gravitySlider");
+    const gravityRead = document.getElementById("gravityRead");
+    gravitySlider.addEventListener("input", () => {
+      this.gravity = Number(gravitySlider.value);
+      gravityRead.textContent = this.gravity;
+    });
+
+    const restSlider = document.getElementById("restitutionSlider");
+    const restRead = document.getElementById("restitutionRead");
+    restSlider.addEventListener("input", () => {
+      this.restitution = Number(restSlider.value) / 100;
+      restRead.textContent = this.restitution.toFixed(2);
+    });
+
+    const countSlider = document.getElementById("countSlider");
+    const countRead = document.getElementById("countRead");
+    countSlider.addEventListener("input", () => {
+      this.ballCount = Number(countSlider.value);
+      countRead.textContent = this.ballCount;
+      this.spawnBalls(); // 数量变化时按新数量重新生成场景
+    });
+
+    const pauseBtn = document.getElementById("pauseBtn");
+    pauseBtn.addEventListener("click", () => {
+      this.running = !this.running;
+      pauseBtn.textContent = this.running ? "⏸ 暂停" : "▶ 继续";
+    });
+
+    const resetBtn = document.getElementById("resetBtn");
+    resetBtn.addEventListener("click", () => {
+      this.elapsed = 0;
+      this.accumulator = 0;
+      this.spawnBalls();
+      if (!this.running) {
+        this.running = true;
+        pauseBtn.textContent = "⏸ 暂停";
+      }
+    });
+  }
+}
+
+// ---- 启动 ----
+window.addEventListener("DOMContentLoaded", () => {
+  const canvas = document.getElementById("scene");
+  new Game(canvas);
+});
+</script>
+</body>
+</html>
