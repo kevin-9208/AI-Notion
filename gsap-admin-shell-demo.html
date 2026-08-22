@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>后台系统骨架 · 顶部条 + 侧边菜单 + 内容区编排</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  :root{
+    --bg: #14161c;
+    --surface: #1b1e27;
+    --surface-2: #20232e;
+    --border: #2b2f3c;
+    --text: #eceef2;
+    --text-muted: #8890a4;
+    --accent: #f5a623;
+    --accent-dim: rgba(245,166,35,0.14);
+    --danger: #ff5d5d;
+    --success: #3ddc97;
+    --topbar-h: 56px;
+    --sidebar-w: 216px;
+    --sidebar-w-collapsed: 64px;
+  }
+  *{ box-sizing: border-box; }
+  html, body{ height: 100%; margin: 0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    overflow: hidden;
+  }
+
+  .shell{ display:flex; height: 100vh; }
+
+  /* ---------------- Sidebar ---------------- */
+  .sidebar{
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-top{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 16px 14px;
+    height: var(--topbar-h);
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-brand{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .sidebar-brand .dot{ width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink:0; }
+  .sidebar-toggle{
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; padding: 4px; display:flex; flex-shrink: 0;
+  }
+  .sidebar-toggle:hover{ color: var(--text); }
+  .sidebar-toggle svg{ width: 16px; height: 16px; }
+
+  .sidebar-nav{ position: relative; display:flex; flex-direction:column; gap: 2px; padding: 14px 12px; }
+
+  .nav-highlight{
+    position: absolute;
+    left: 0; width: 100%;
+    background: var(--accent-dim);
+    border-radius: 8px;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .nav-highlight::before{
+    content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px;
+    background: var(--accent); border-radius: 0 3px 3px 0;
+  }
+
+  .nav-item{
+    position: relative; z-index: 1;
+    display:flex; align-items:center; gap: 12px;
+    padding: 10px 11px; border-radius: 8px;
+    font-size: 13.5px; font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer; background: none; border: none;
+    width: 100%; text-align: left; font-family: inherit;
+    white-space: nowrap; overflow: hidden;
+  }
+  .nav-item svg{ width:17px; height:17px; flex-shrink:0; opacity:0.85; }
+  .nav-item:hover{ color: var(--text); }
+  .nav-item[aria-current="true"]{ color: var(--accent); }
+  .nav-item[aria-current="true"] svg{ opacity:1; }
+  .nav-item .label{ display:inline-block; }
+
+  /* ---------------- Main column ---------------- */
+  .main-col{ flex: 1; display:flex; flex-direction: column; min-width: 0; }
+
+  .topbar{
+    position: relative;
+    height: var(--topbar-h);
+    flex-shrink: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 0 22px;
+  }
+
+  .loading-line{
+    position: absolute;
+    left: 0; bottom: -1px;
+    width: 100%; height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    opacity: 0;
+  }
+
+  .breadcrumb{
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    font-family:'JetBrains Mono', monospace;
+    letter-spacing: -0.01em;
+  }
+  .breadcrumb .sep{ color: var(--text-muted); margin: 0 6px; }
+  .breadcrumb .crumb-muted{ color: var(--text-muted); }
+
+  .topbar-right{ display:flex; align-items:center; gap: 14px; }
+
+  .btn{
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
+    border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface-2); color: var(--text-muted);
+    padding: 7px 12px; cursor: pointer;
+  }
+  .btn:hover{ color: var(--text); border-color: #3a3f4f; }
+
+  .bell-wrap{ position: relative; }
+  .bell-btn{
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; padding: 6px; display:flex; position: relative;
+  }
+  .bell-btn:hover{ color: var(--text); }
+  .bell-btn svg{ width: 18px; height: 18px; }
+  .bell-badge{
+    display: none;
+    position: absolute; top: 2px; right: 2px;
+    min-width: 15px; height: 15px; padding: 0 3px;
+    border-radius: 999px;
+    background: var(--danger);
+    color: #fff;
+    font-size: 10px; font-weight: 700;
+    align-items:center; justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+  }
+
+  .avatar-wrap{ position: relative; }
+  .avatar-btn{
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-muted);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 11.5px; font-weight: 600; cursor: pointer;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .avatar-btn:hover{ border-color: #3a3f4f; }
+  .avatar-dropdown{
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    width: 168px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    padding: 6px;
+    z-index: 50;
+  }
+  .avatar-dropdown button{
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; color: var(--text);
+    font-family: inherit; font-size: 13px;
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  }
+  .avatar-dropdown button:hover{ background: var(--surface-2); }
+  .avatar-dropdown .danger{ color: var(--danger); }
+  .avatar-dropdown hr{ border: none; border-top: 1px solid var(--border); margin: 5px 2px; }
+
+  /* ---------------- Content area ---------------- */
+  .content-area{
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    position: relative;
+  }
+
+  .page-content h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 21px; font-weight: 600; margin: 0 0 6px;
+  }
+  .page-content .page-sub{ color: var(--text-muted); font-size: 13px; margin: 0 0 22px; }
+
+  .kpi-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+  .kpi-card{
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .kpi-card .kpi-label{ font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-family:'JetBrains Mono', monospace; }
+  .kpi-card .kpi-value{ font-family:'Space Grotesk', sans-serif; font-size: 24px; font-weight: 600; margin-top: 6px; }
+  .kpi-card .kpi-delta{ font-size: 12px; color: var(--success); margin-top: 4px; }
+
+  .card{ background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+
+  .list-row{
+    display:flex; align-items:center; justify-content: space-between;
+    padding: 13px 18px; border-bottom: 1px solid var(--border);
+    font-size: 14px; cursor: pointer;
+  }
+  .list-row:last-child{ border-bottom: none; }
+  .list-row:hover{ background: rgba(255,255,255,0.02); }
+  .list-row .row-name{ display:flex; align-items:center; gap: 10px; font-weight: 500; }
+  .avatar-sm{
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--surface-2); color: var(--text-muted);
+    display:flex; align-items:center; justify-content:center;
+    font-size: 10.5px; font-weight: 600; flex-shrink: 0;
+  }
+  .row-meta{ color: var(--text-muted); font-size: 13px; }
+  .row-chevron{ color: var(--text-muted); }
+
+  .back-link{
+    display:inline-flex; align-items:center; gap: 6px;
+    background: none; border: none; color: var(--text-muted);
+    font-family: inherit; font-size: 13px; cursor: pointer;
+    padding: 0; margin-bottom: 16px;
+  }
+  .back-link:hover{ color: var(--text); }
+
+  .detail-grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 520px; }
+  .detail-field{ background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .detail-field .f-label{ font-size: 11.5px; color: var(--text-muted); font-family:'JetBrains Mono', monospace; text-transform: uppercase; }
+  .detail-field .f-value{ font-size: 14.5px; font-weight: 500; margin-top: 5px; }
+
+  .placeholder-card{
+    background: var(--surface); border: 1px dashed var(--border);
+    border-radius: 10px; padding: 40px 20px;
+    text-align: center; color: var(--text-muted); font-size: 13.5px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-brand"><span class="dot"></span><span class="label">Console</span></div>
+      <button class="sidebar-toggle" id="sidebarToggle" title="收起/展开侧边栏">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+      <div class="nav-highlight" id="navHighlight"></div>
+
+      <button class="nav-item" data-page="dashboard" aria-current="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span class="label">概览</span>
+      </button>
+      <button class="nav-item" data-page="customers">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
+        <span class="label">客户</span>
+      </button>
+      <button class="nav-item" data-page="orders">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        <span class="label">订单</span>
+      </button>
+      <button class="nav-item" data-page="reports">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 19V9M12 19V5M19 19v-6"/></svg>
+        <span class="label">报表</span>
+      </button>
+      <button class="nav-item" data-page="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.14-1.4l2-1.55-2-3.46-2.36.95a7 7 0 0 0-2.4-1.4L14 2h-4l-.1 2.14a7 7 0 0 0-2.4 1.4l-2.36-.95-2 3.46 2 1.55A7 7 0 0 0 5 12c0 .48.05.94.14 1.4l-2 1.55 2 3.46 2.36-.95a7 7 0 0 0 2.4 1.4L10 22h4l.1-2.14a7 7 0 0 0 2.4-1.4l2.36.95 2-3.46-2-1.55c.09-.46.14-.92.14-1.4Z"/></svg>
+        <span class="label">设置</span>
+      </button>
+    </nav>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div class="loading-line" id="loadingLine"></div>
+      <div class="breadcrumb" id="breadcrumb">概览</div>
+      <div class="topbar-right">
+        <button class="btn" id="btnSimulateNotif">模拟新消息</button>
+        <div class="bell-wrap">
+          <button class="bell-btn" id="bellBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
+            <span class="bell-badge" id="bellBadge">0</span>
+          </button>
+        </div>
+        <div class="avatar-wrap">
+          <button class="avatar-btn" id="avatarBtn">KV</button>
+          <div class="avatar-dropdown" id="avatarDropdown">
+            <button>个人资料</button>
+            <button>账号设置</button>
+            <hr>
+            <button class="danger">退出登录</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="content-area" id="contentArea"></main>
+  </div>
+</div>
+
+<script>
+(function(){
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const D = (v) => reduced ? 0.001 : v;
+
+  /* =========================================================
+     Sample data
+     ========================================================= */
+  const customers = [
+    { id: 1, name: '陈志强', dept: '销售部', joined: '2021-03-14', email: 'chen@example.com', phone: '138-0000-1234' },
+    { id: 2, name: '林美琪', dept: '市场部', joined: '2022-07-02', email: 'lin@example.com', phone: '139-0000-5678' },
+    { id: 3, name: '黄冠宇', dept: '技术部', joined: '2020-11-19', email: 'huang@example.com', phone: '137-0000-9012' },
+    { id: 4, name: '吴雅婷', dept: '客服部', joined: '2023-01-08', email: 'wu@example.com', phone: '135-0000-3456' },
+  ];
+
+  /* =========================================================
+     Sidebar: collapse toggle
+     ========================================================= */
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  let collapsed = false;
+
+  function toggleSidebar(){
+    collapsed = !collapsed;
+    const labels = sidebar.querySelectorAll('.label');
+
+    // GSAP needs a resolvable numeric length to tween -- read the px values
+    // straight from the CSS custom properties rather than passing var() strings.
+    const rootStyles = getComputedStyle(document.documentElement);
+    const widthExpanded = parseFloat(rootStyles.getPropertyValue('--sidebar-w'));
+    const widthCollapsed = parseFloat(rootStyles.getPropertyValue('--sidebar-w-collapsed'));
+
+    if (collapsed){
+      gsap.to(labels, { opacity: 0, duration: D(0.1), stagger: 0.01 });
+      gsap.to(sidebar, {
+        width: widthCollapsed, duration: D(0.28), ease: 'power2.inOut', delay: D(0.04),
+        onUpdate: () => moveHighlightTo(activeNavEl(), false),
+        onComplete: () => moveHighlightTo(activeNavEl(), false)
+      });
+    } else {
+      gsap.to(sidebar, {
+        width: widthExpanded, duration: D(0.28), ease: 'power2.inOut',
+        onUpdate: () => moveHighlightTo(activeNavEl(), false),
+        onComplete: () => moveHighlightTo(activeNavEl(), false)
+      });
+      gsap.to(labels, { opacity: 1, duration: D(0.2), delay: D(0.14), stagger: 0.01 });
+    }
+  }
+  sidebarToggle.addEventListener('click', toggleSidebar);
+
+  /* =========================================================
+     Sidebar: sliding highlight
+     ========================================================= */
+  const navContainer = document.getElementById('sidebarNav');
+  const navHighlight = document.getElementById('navHighlight');
+  const navItems = Array.from(navContainer.querySelectorAll('.nav-item'));
+
+  function activeNavEl(){
+    return navContainer.querySelector('[aria-current="true"]') || navItems[0];
+  }
+
+  function moveHighlightTo(item, animate){
+    const containerRect = navContainer.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    const top = itemRect.top - containerRect.top;
+
+    if (animate && !reduced){
+      gsap.to(navHighlight, { top, height: itemRect.height, duration: 0.35, ease: 'power3.out' });
+    } else {
+      gsap.set(navHighlight, { top, height: itemRect.height });
+    }
+  }
+
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const page = item.dataset.page;
+      navItems.forEach(i => i.removeAttribute('aria-current'));
+      item.setAttribute('aria-current', 'true');
+      // sidebar feedback fires immediately -- it does not wait on data loading
+      moveHighlightTo(item, true);
+      go(page, {}, 'sibling');
+    });
+  });
+
+  moveHighlightTo(activeNavEl(), false);
+
+  /* =========================================================
+     Topbar: loading line
+     ========================================================= */
+  const loadingLine = document.getElementById('loadingLine');
+
+  function startLoadingBar(){
+    gsap.killTweensOf(loadingLine);
+    gsap.set(loadingLine, { scaleX: 0, opacity: 1 });
+    gsap.to(loadingLine, { scaleX: 0.7, duration: D(0.35), ease: 'power1.out' });
+  }
+  function finishLoadingBar(){
+    gsap.killTweensOf(loadingLine);
+    gsap.to(loadingLine, {
+      scaleX: 1, duration: D(0.15), ease: 'power1.out',
+      onComplete: () => {
+        gsap.to(loadingLine, {
+          opacity: 0, duration: D(0.25), delay: D(0.05),
+          onComplete: () => gsap.set(loadingLine, { scaleX: 0 })
+        });
+      }
+    });
+  }
+
+  /* =========================================================
+     Topbar: breadcrumb crossfade
+     ========================================================= */
+  const breadcrumbEl = document.getElementById('breadcrumb');
+
+  function breadcrumbHtml(pageKey, params){
+    const map = {
+      dashboard: '概览',
+      customers: '客户 <span class="sep">/</span> <span class="crumb-muted">客户列表</span>',
+      orders: '订单',
+      reports: '报表',
+      settings: '设置'
+    };
+    if (pageKey === 'customer-detail'){
+      const c = customers.find(c => c.id === params.id);
+      return `客户 <span class="sep">/</span> <span class="crumb-muted">客户列表</span> <span class="sep">/</span> ${c ? c.name : ''}`;
+    }
+    return map[pageKey] || '';
+  }
+
+  function updateBreadcrumb(pageKey, params){
+    gsap.to(breadcrumbEl, {
+      opacity: 0, y: -6, duration: D(0.14),
+      onComplete: () => {
+        breadcrumbEl.innerHTML = breadcrumbHtml(pageKey, params);
+        gsap.fromTo(breadcrumbEl, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: D(0.2), ease: 'power2.out' });
+      }
+    });
+  }
+
+  /* =========================================================
+     Topbar: notification bell
+     ========================================================= */
+  const bellBtn = document.getElementById('bellBtn');
+  const bellBadge = document.getElementById('bellBadge');
+  let notifCount = 0;
+
+  document.getElementById('btnSimulateNotif').addEventListener('click', () => {
+    notifCount += 1;
+    bellBadge.textContent = notifCount;
+    bellBadge.style.display = 'flex';
+
+    gsap.timeline()
+      .to(bellBtn, { rotation: -14, duration: D(0.08) })
+      .to(bellBtn, { rotation: 11, duration: D(0.08) })
+      .to(bellBtn, { rotation: -7, duration: D(0.08) })
+      .to(bellBtn, { rotation: 0, duration: D(0.08) });
+
+    gsap.fromTo(bellBadge, { scale: 0 }, { scale: 1, duration: D(0.3), ease: 'back.out(3)' });
+  });
+
+  /* =========================================================
+     Topbar: avatar dropdown
+     ========================================================= */
+  const avatarBtn = document.getElementById('avatarBtn');
+  const avatarDropdown = document.getElementById('avatarDropdown');
+  let avatarOpen = false;
+
+  function toggleAvatarMenu(open){
+    avatarOpen = open;
+    if (avatarOpen){
+      avatarDropdown.style.display = 'block';
+      gsap.fromTo(avatarDropdown,
+        { opacity: 0, scale: 0.92, y: -6 },
+        { opacity: 1, scale: 1, y: 0, duration: D(0.18), ease: 'power2.out', transformOrigin: 'top right' });
+    } else {
+      gsap.to(avatarDropdown, {
+        opacity: 0, scale: 0.92, y: -6, duration: D(0.14), ease: 'power2.in', transformOrigin: 'top right',
+        onComplete: () => { avatarDropdown.style.display = 'none'; }
+      });
+    }
+  }
+
+  avatarBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleAvatarMenu(!avatarOpen);
+  });
+  document.addEventListener('click', (e) => {
+    if (avatarOpen && !avatarDropdown.contains(e.target) && e.target !== avatarBtn){
+      toggleAvatarMenu(false);
+    }
+  });
+
+  /* =========================================================
+     Page templates
+     ========================================================= */
+  function initials(name){ return name.slice(-2); }
+
+  function renderDashboard(){
+    return `
+      <div class="page-content">
+        <h1>概览</h1>
+        <p class="page-sub">关键指标一览</p>
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label">本月营收</div><div class="kpi-value">¥128,400</div><div class="kpi-delta">↑ 12.4%</div></div>
+          <div class="kpi-card"><div class="kpi-label">新增客户</div><div class="kpi-value">86</div><div class="kpi-delta">↑ 6.1%</div></div>
+          <div class="kpi-card"><div class="kpi-label">待处理工单</div><div class="kpi-value">14</div><div class="kpi-delta" style="color:var(--text-muted)">与上周持平</div></div>
+        </div>
+        <div class="placeholder-card">图表 / 更多模块占位区域</div>
+      </div>
+    `;
+  }
+
+  function renderCustomers(){
+    const rows = customers.map(c => `
+      <div class="list-row" data-id="${c.id}">
+        <span class="row-name"><span class="avatar-sm">${initials(c.name)}</span>${c.name}</span>
+        <span class="row-meta">${c.dept}</span>
+        <span class="row-meta">${c.joined}</span>
+        <span class="row-chevron">›</span>
+      </div>
+    `).join('');
+    return `
+      <div class="page-content">
+        <h1>客户列表</h1>
+        <p class="page-sub">点击任意一行，进入客户详情（层级钻取动画）</p>
+        <div class="card">${rows}</div>
+      </div>
+    `;
+  }
+
+  function renderCustomerDetail(params){
+    const c = customers.find(c => c.id === params.id);
+    if (!c) return `<div class="page-content"><h1>未找到该客户</h1></div>`;
+    return `
+      <div class="page-content">
+        <button class="back-link" id="btnBackToList">← 返回客户列表</button>
+        <h1>${c.name}</h1>
+        <p class="page-sub">客户详情</p>
+        <div class="detail-grid">
+          <div class="detail-field"><div class="f-label">部门</div><div class="f-value">${c.dept}</div></div>
+          <div class="detail-field"><div class="f-label">入职日期</div><div class="f-value">${c.joined}</div></div>
+          <div class="detail-field"><div class="f-label">邮箱</div><div class="f-value">${c.email}</div></div>
+          <div class="detail-field"><div class="f-label">电话</div><div class="f-value">${c.phone}</div></div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderPlaceholder(title, sub){
+    return `
+      <div class="page-content">
+        <h1>${title}</h1>
+        <p class="page-sub">${sub}</p>
+        <div class="placeholder-card">此页面内容为占位，用于演示切换动画</div>
+      </div>
+    `;
+  }
+
+  function renderPage(pageKey, params){
+    switch (pageKey){
+      case 'dashboard': return renderDashboard();
+      case 'customers': return renderCustomers();
+      case 'customer-detail': return renderCustomerDetail(params);
+      case 'orders': return renderPlaceholder('订单管理', '订单列表占位页面');
+      case 'reports': return renderPlaceholder('报表中心', '报表模块占位页面');
+      case 'settings': return renderPlaceholder('系统设置', '设置模块占位页面');
+      default: return renderPlaceholder('未找到页面', '');
+    }
+  }
+
+  function attachPageHandlers(pageKey, params, rootEl){
+    if (pageKey === 'customers'){
+      rootEl.querySelectorAll('.list-row').forEach(row => {
+        row.addEventListener('click', () => {
+          go('customer-detail', { id: Number(row.dataset.id) }, 'forward');
+        });
+      });
+    }
+    if (pageKey === 'customer-detail'){
+      const backBtn = rootEl.querySelector('#btnBackToList');
+      if (backBtn) backBtn.addEventListener('click', () => go('customers', {}, 'back'));
+    }
+    if (pageKey === 'dashboard'){
+      const cards = rootEl.querySelectorAll('.kpi-card');
+      gsap.fromTo(cards,
+        { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: D(0.3), stagger: D(0.06), ease: 'power2.out', delay: D(0.1) });
+    }
+  }
+
+  /* =========================================================
+     Content transition + routing
+     ========================================================= */
+  const contentArea = document.getElementById('contentArea');
+  let currentPage = 'dashboard';
+  let currentParams = {};
+  let navToken = 0; // guards against overlapping/rapid navigations
+
+  function swapContent(pageKey, params, transitionType){
+    const old = contentArea.firstElementChild;
+
+    const outX = transitionType === 'forward' ? -24 : transitionType === 'back' ? 24 : 0;
+    const inX  = transitionType === 'forward' ? 24  : transitionType === 'back' ? -24 : 0;
+    const outY = transitionType === 'sibling' ? -6 : 0;
+    const inY  = transitionType === 'sibling' ? 6 : 0;
+
+    function insertNew(){
+      contentArea.innerHTML = renderPage(pageKey, params);
+      const newEl = contentArea.firstElementChild;
+      attachPageHandlers(pageKey, params, newEl);
+      gsap.fromTo(newEl,
+        { opacity: 0, x: inX, y: inY },
+        { opacity: 1, x: 0, y: 0, duration: D(0.25), ease: 'power2.out' });
+    }
+
+    if (old){
+      gsap.to(old, { opacity: 0, x: outX, y: outY, duration: D(0.16), ease: 'power2.in', onComplete: insertNew });
+    } else {
+      insertNew();
+    }
+  }
+
+  function go(pageKey, params, transitionType){
+    const myToken = ++navToken;
+    currentPage = pageKey;
+    currentParams = params;
+
+    startLoadingBar();
+
+    // simulated network delay -- in a real app this is your actual fetch/await
+    setTimeout(() => {
+      if (myToken !== navToken) return; // a newer navigation superseded this one
+      swapContent(pageKey, params, transitionType);
+      updateBreadcrumb(pageKey, params);
+      finishLoadingBar();
+    }, reduced ? 0 : 320);
+  }
+
+  // initial load
+  contentArea.innerHTML = renderPage('dashboard', {});
+  attachPageHandlers('dashboard', {}, contentArea.firstElementChild);
+  gsap.fromTo(contentArea.firstElementChild, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: D(0.25) });
+})();
+</script>
+
+</body>
+</html>
