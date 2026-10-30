@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0b1220">
+<title>贪吃蛇 · Snake Arcade</title>
+<style>
+:root{color-scheme:dark;--bg:#08111f;--panel:#101d30;--panel2:#14243a;--line:#263b56;--text:#edf5ff;--muted:#8ea3bd;--green:#6ee7a8;--green2:#21c982;--gold:#ffd166;--red:#ff7185;--blue:#72b7ff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:radial-gradient(ellipse at 50% 0%,#142744 0%,#08111f 52%,#050b14 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text)}
+body{display:flex;justify-content:center;align-items:center;padding:24px 14px;min-height:100svh}
+.app{width:min(100%,960px)}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(145deg,#143d38,#102b3b);border:1px solid #286657;display:grid;place-items:center;box-shadow:0 8px 28px #0005;color:var(--green);font-size:25px}.brand h1{font-size:clamp(20px,3vw,27px);margin:0;letter-spacing:.4px}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px;letter-spacing:1.8px;text-transform:uppercase}
+.top-actions{display:flex;gap:8px;align-items:center}.select-wrap{position:relative}select,button{font:inherit}select{appearance:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 34px 10px 12px;color:var(--text);outline:none;cursor:pointer} .select-wrap:after{content:'⌄';position:absolute;right:12px;top:6px;color:var(--muted);pointer-events:none}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start}.game-card,.side-card{background:linear-gradient(160deg,#122139eF,#0c1728f2);border:1px solid #263d59;border-radius:18px;box-shadow:0 18px 50px #0005;overflow:hidden}
+.game-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid #26384f}.status{display:flex;align-items:center;gap:8px;font-size:12px;color:#a8bdd4;letter-spacing:1px}.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green)}.keys{font-size:11px;color:#7189a5}
+.board-wrap{position:relative;padding:14px;background:#07111e}.board-frame{position:relative;width:100%;aspect-ratio:1/1;max-height:min(68vh,650px);margin:auto;border:1px solid #29425e;border-radius:10px;overflow:hidden;background:#091726;box-shadow:inset 0 0 50px #0008}
+canvas{width:100%;height:100%;display:block;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#06101dcc;backdrop-filter:blur(5px);padding:20px;z-index:3}.overlay.hidden{display:none}.modal{width:min(100%,340px);text-align:center;padding:26px 22px;border:1px solid #31516b;border-radius:18px;background:linear-gradient(145deg,#162a43f5,#0d1b2cf5);box-shadow:0 20px 70px #0009}.modal-icon{font-size:42px;margin-bottom:9px}.modal h2{font-size:25px;margin:0 0 8px}.modal p{font-size:13px;line-height:1.65;color:#9eb2c9;margin:0 0 18px}.primary{border:0;border-radius:11px;padding:12px 22px;color:#062216;background:linear-gradient(135deg,#8bf1b9,#34d399);font-weight:800;cursor:pointer;box-shadow:0 7px 22px #23c98135;transition:transform .15s,filter .15s}.primary:hover{filter:brightness(1.07);transform:translateY(-1px)}.primary:active{transform:translateY(1px)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:13px 14px 14px}.stat{background:#0b192a;border:1px solid #1d334d;border-radius:11px;padding:10px 12px}.stat label{display:block;color:#8198b2;font-size:10px;letter-spacing:1.2px;margin-bottom:5px}.stat strong{font-size:21px;font-variant-numeric:tabular-nums}.stat.score strong{color:var(--green)}
+.side{display:flex;flex-direction:column;gap:14px}.side-card{padding:16px}.side-card h3{font-size:13px;letter-spacing:1.1px;color:#b4c8de;margin:0 0 13px}.best{display:flex;justify-content:space-between;align-items:center}.best span{font-size:12px;color:var(--muted)}.best strong{font-size:23px;color:var(--gold);font-variant-numeric:tabular-nums}.divider{height:1px;background:#26384f;margin:14px 0}.action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.action{background:#182b43;border:1px solid #2b4562;color:#dceaff;border-radius:10px;padding:10px 8px;cursor:pointer;font-size:12px;transition:.15s}.action:hover{background:#203b59;border-color:#477096}.action:disabled{opacity:.45;cursor:not-allowed}
+.instructions{display:grid;gap:10px}.instruction{display:flex;gap:10px;align-items:center;color:#a6bad0;font-size:12px;line-height:1.45}.keycap{flex:none;min-width:31px;text-align:center;padding:5px 6px;border-radius:6px;background:#1b3049;border:1px solid #38516c;color:#e6f2ff;font-size:11px;box-shadow:0 2px 0 #091321}.tip{font-size:11px;color:#758ba5;line-height:1.55;margin-top:12px}
+.mobile-controls{display:none;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,43px);gap:5px;justify-content:center;padding:0 0 15px}.mobile-controls button{border:1px solid #2c4864;border-radius:9px;background:#142840;color:#d6e8fa;font-size:18px;touch-action:manipulation}.mobile-controls button:active{background:#24523f;color:#8df3bd}.mobile-controls .up{grid-column:2}.mobile-controls .left{grid-column:1;grid-row:2}.mobile-controls .down{grid-column:2;grid-row:2}.mobile-controls .right{grid-column:3;grid-row:2}
+.footer{text-align:center;color:#607893;font-size:11px;margin-top:16px}
+@media(max-width:760px){body{padding:15px 10px;align-items:flex-start}.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr}.side-card:last-child{grid-column:1/-1}.board-frame{max-height:none}.keys{display:none}.mobile-controls{display:grid}.top{margin-bottom:12px}.stats{padding-bottom:12px}}
+@media(max-width:430px){.side{grid-template-columns:1fr}.side-card:last-child{grid-column:auto}.brand p{font-size:10px}.logo{width:41px;height:41px}.top-actions select{max-width:118px;font-size:12px}.game-head{padding:11px 12px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="brand"><div class="logo">🐍</div><div><h1>贪吃蛇</h1><p>SNAKE ARCADE · CLASSIC</p></div></div>
+    <div class="top-actions"><div class="select-wrap"><select id="difficulty" aria-label="游戏难度"><option value="easy">休闲模式</option><option value="normal" selected>标准模式</option><option value="hard">极速模式</option></select></div></div>
+  </header>
+  <section class="layout">
+    <div class="game-card">
+      <div class="game-head"><div class="status"><i class="dot" id="statusDot"></i><span id="statusText">READY TO PLAY</span></div><div class="keys">方向键 / WASD 控制 · 空格暂停</div></div>
+      <div class="board-wrap"><div class="board-frame"><canvas id="game" width="600" height="600" aria-label="贪吃蛇游戏区域"></canvas>
+        <div class="overlay" id="overlay"><div class="modal"><div class="modal-icon" id="modalIcon">🐍</div><h2 id="modalTitle">准备好了吗？</h2><p id="modalText">吃掉红色果实，让蛇不断变长。<br>不要撞到墙壁，也不要咬到自己！</p><button class="primary" id="mainButton">开始游戏</button></div></div>
+      </div></div>
+      <div class="stats"><div class="stat score"><label>SCORE</label><strong id="score">0</strong></div><div class="stat"><label>BEST</label><strong id="bestInline">0</strong></div><div class="stat"><label>LENGTH</label><strong id="length">3</strong></div></div>
+      <div class="mobile-controls" aria-label="方向控制"><button class="up" data-dir="up">▲</button><button class="left" data-dir="left">◀</button><button class="down" data-dir="down">▼</button><button class="right" data-dir="right">▶</button></div>
+    </div>
+    <aside class="side">
+      <div class="side-card"><h3>个人记录</h3><div class="best"><span>历史最高分</span><strong id="bestSide">0</strong></div><div class="divider"></div><div class="action-row"><button class="action" id="pauseBtn">Ⅱ 暂停</button><button class="action" id="restartBtn">↻ 重新开始</button></div></div>
+      <div class="side-card"><h3>操作指南</h3><div class="instructions"><div class="instruction"><span class="keycap">↑</span><span>向上移动</span></div><div class="instruction"><span class="keycap">↓</span><span>向下移动</span></div><div class="instruction"><span class="keycap">← →</span><span>左右转向</span></div><div class="instruction"><span class="keycap">WASD</span><span>也可使用 WASD</span></div><div class="instruction"><span class="keycap">Space</span><span>暂停 / 继续</span></div></div><p class="tip">每吃到一个果实 +10 分，蛇身增长一节。难度越高，移动速度越快。</p></div>
+    </aside>
+  </section>
+  <div class="footer">SNAKE ARCADE · 用方向键或触屏开始你的挑战</div>
+</main>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const $ = id => document.getElementById(id);
+  const SIZE = 24, CELL = canvas.width / SIZE;
+  const SPEED = { easy: 155, normal: 112, hard: 76 };
+  const COLORS = { bg:'#091827', grid:'rgba(98,143,174,.085)', snake:'#55dfa0', snakeHead:'#a4ffd0', food:'#ff6d78' };
+  let snake, dir, nextDir, food, score, best, state='ready', timer=null, lastTime=0, accumulator=0, touchStart=null;
+  try { best = Number(localStorage.getItem('snakeArcadeBest') || 0); } catch (_) { best = 0; }
+  $('bestSide').textContent = $('bestInline').textContent = best;
+
+  function reset() {
+    snake = [{x:8,y:12},{x:7,y:12},{x:6,y:12}];
+    dir = {x:1,y:0}; nextDir = {x:1,y:0};
+    score = 0; accumulator = 0; lastTime = 0;
+    spawnFood(); updateStats(); draw();
+  }
+  function spawnFood() {
+    let p, tries=0;
+    do { p={x:Math.floor(Math.random()*SIZE),y:Math.floor(Math.random()*SIZE)}; tries++; }
+    while (snake.some(s=>s.x===p.x&&s.y===p.y) && tries<1000);
+    food=p;
+  }
+  function updateStats() {
+    $('score').textContent=score; $('length').textContent=snake.length;
+    $('bestInline').textContent=best; $('bestSide').textContent=best;
+  }
+  function setStatus(text, active) {
+    $('statusText').textContent=text;
+    $('statusDot').style.background=active?'#6ee7a8':(state==='over'?'#ff7185':'#ffd166');
+    $('statusDot').style.boxShadow=active?'0 0 12px #6ee7a8':'none';
+  }
+  function showOverlay(icon,title,text,button) {
+    $('modalIcon').textContent=icon; $('modalTitle').textContent=title; $('modalText').innerHTML=text;
+    $('mainButton').textContent=button; $('overlay').classList.remove('hidden');
+  }
+  function hideOverlay(){ $('overlay').classList.add('hidden'); }
+  function start() {
+    if(state==='over'||state==='ready') reset();
+    state='playing'; hideOverlay(); setStatus('IN GAME',true); $('pauseBtn').textContent='Ⅱ 暂停';
+    lastTime=0; accumulator=0; requestAnimationFrame(loop);
+  }
+  function pause() {
+    if(state==='playing') { state='paused'; setStatus('PAUSED',false); $('pauseBtn').textContent='▶ 继续'; showOverlay('Ⅱ','游戏已暂停','休息一下，准备好后继续挑战。','继续游戏'); }
+    else if(state==='paused') start();
+  }
+  function endGame() {
+    state='over'; setStatus('GAME OVER',false); $('pauseBtn').textContent='Ⅱ 暂停';
+    if(score>best){best=score;try{localStorage.setItem('snakeArcadeBest',String(best));}catch(_){} }
+    updateStats(); showOverlay('💥','游戏结束',`本次得分 <b style="color:#6ee7a8">${score}</b> 分<br>蛇身长度 ${snake.length} 节 · 再来挑战一次吧！`,'再玩一次');
+  }
+  function changeDirection(d) {
+    if(!d) return;
+    if(d.x===-dir.x && d.y===-dir.y) return;
+    if(d.x===dir.x && d.y===dir.y) return;
+    nextDir=d;
+    if(state==='ready') start();
+  }
+  function step() {
+    dir=nextDir;
+    const head={x:snake[0].x+dir.x,y:snake[0].y+dir.y};
+    const ate=head.x===food.x&&head.y===food.y;
+    const body=ate?snake:snake.slice(0,-1);
+    if(head.x<0||head.y<0||head.x>=SIZE||head.y>=SIZE||body.some(p=>p.x===head.x&&p.y===head.y)){endGame();return;}
+    snake.unshift(head);
+    if(ate){score+=10;if(score>best){best=score;try{localStorage.setItem('snakeArcadeBest',String(best));}catch(_){}}spawnFood();}
+    else snake.pop();
+    updateStats();
+  }
+  function loop(now) {
+    if(state!=='playing') return;
+    if(!lastTime) lastTime=now;
+    accumulator+=Math.min(now-lastTime,250); lastTime=now;
+    const interval=SPEED[$('difficulty').value];
+    while(accumulator>=interval && state==='playing'){step();accumulator-=interval;}
+    draw();
+    if(state==='playing') requestAnimationFrame(loop);
+  }
+  function roundedRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r);}
+  function draw() {
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H); ctx.fillStyle=COLORS.bg;ctx.fillRect(0,0,W,H);
+    // subtle checkerboard and grid
+    for(let y=0;y<SIZE;y++) for(let x=0;x<SIZE;x++) if((x+y)%2===0){ctx.fillStyle='rgba(39,75,94,.10)';ctx.fillRect(x*CELL,y*CELL,CELL,CELL);}
+    ctx.strokeStyle=COLORS.grid;ctx.lineWidth=1;ctx.beginPath();
+    for(let i=0;i<=SIZE;i++){let p=i*CELL+.5;ctx.moveTo(p,0);ctx.lineTo(p,H);ctx.moveTo(0,p);ctx.lineTo(W,p);}ctx.stroke();
+    // food glow
+    const fx=(food.x+.5)*CELL,fy=(food.y+.5)*CELL;
+    ctx.save();ctx.shadowColor=COLORS.food;ctx.shadowBlur=22;ctx.fillStyle=COLORS.food;ctx.beginPath();ctx.arc(fx,fy,CELL*.31,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.fillStyle='#ffd0d5';ctx.beginPath();ctx.arc(fx-CELL*.08,fy-CELL*.09,CELL*.075,0,Math.PI*2);ctx.fill();
+    // snake body from tail to head, with rounded segments
+    for(let i=snake.length-1;i>=0;i--){const p=snake[i],pad=i===0?3:4,x=p.x*CELL+pad,y=p.y*CELL+pad,w=CELL-pad*2,h=CELL-pad*2;
+      const t=1-i/Math.max(1,snake.length);ctx.fillStyle=i===0?COLORS.snakeHead:`hsl(${148-t*15} ${58+t*13}% ${43+t*13}%)`;
+      ctx.shadowColor=i===0?'rgba(100,255,185,.55)':'transparent';ctx.shadowBlur=i===0?13:0;roundedRect(ctx,x,y,w,h,7);ctx.fill();
+    }
+    ctx.shadowBlur=0;
+    // eyes on head according to direction
+    const h=snake[0],cx=(h.x+.5)*CELL,cy=(h.y+.5)*CELL;
+    const forward=dir,side={x:-dir.y,y:dir.x};
+    for(const sign of [-1,1]){const ex=cx+forward.x*5+side.x*4*sign,ey=cy+forward.y*5+side.y*4*sign;ctx.fillStyle='#073326';ctx.beginPath();ctx.arc(ex,ey,2.2,0,Math.PI*2);ctx.fill();}
+  }
+  const DIRS={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+  document.addEventListener('keydown',e=>{
+    const map={ArrowUp:DIRS.up,KeyW:DIRS.up,ArrowDown:DIRS.down,KeyS:DIRS.down,ArrowLeft:DIRS.left,KeyA:DIRS.left,ArrowRight:DIRS.right,KeyD:DIRS.right};
+    if(map[e.code]){e.preventDefault();changeDirection(map[e.code]);}
+    else if(e.code==='Space'){e.preventDefault();if(state==='playing'||state==='paused')pause();else if(state==='ready')start();}
+    else if(e.code==='Enter'&&(state==='ready'||state==='over'))start();
+  });
+  document.querySelectorAll('[data-dir]').forEach(btn=>{
+    const act=e=>{e.preventDefault();changeDirection(DIRS[btn.dataset.dir]);};
+    btn.addEventListener('pointerdown',act);
+  });
+  $('mainButton').addEventListener('click',()=>{if(state==='paused')start();else start();});
+  $('pauseBtn').addEventListener('click',()=>{if(state==='playing'||state==='paused')pause();});
+  $('restartBtn').addEventListener('click',()=>{reset();start();});
+  $('difficulty').addEventListener('change',()=>{if(state==='playing'){lastTime=0;accumulator=0;}});
+  canvas.addEventListener('pointerdown',e=>{touchStart={x:e.clientX,y:e.clientY};});
+  canvas.addEventListener('pointerup',e=>{if(!touchStart)return;const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null;if(Math.max(Math.abs(dx),Math.abs(dy))<18)return;if(Math.abs(dx)>Math.abs(dy))changeDirection(dx>0?DIRS.right:DIRS.left);else changeDirection(dy>0?DIRS.down:DIRS.up);});
+  reset(); setStatus('READY TO PLAY',false); showOverlay('🐍','准备好了吗？','吃掉红色果实，让蛇不断变长。<br>不要撞到墙壁，也不要咬到自己！','开始游戏');
+})();
+</script>
+</body>
+</html>
